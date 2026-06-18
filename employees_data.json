@@ -1,0 +1,50 @@
+{
+    "1234": {
+        "id": "1234",
+        "name": "Hansika Agrawal",
+        "dept": "CSE",
+        "designation": "WEB development",
+        "salary": 60000.0,
+        "attendance": {
+            "working_days": 30,
+            "present_days": 25,
+            "percentage": 83.33333333333334,
+            "status": "Average"
+        },
+        "performance": {
+            "score": 0.0,
+            "rating": "N/A"
+        },
+        "payroll": {
+            "basic": 60000.0,
+            "bonus": 0.0,
+            "allowance": 0.0,
+            "tax": 0.0,
+            "net_salary": 60000.0
+        }
+    },
+    "1009": {
+        "id": "1009",
+        "name": "Rishab",
+        "dept": "CSE",
+        "designation": "cyber security",
+        "salary": 50000.0,
+        "attendance": {
+            "working_days": 0,
+            "present_days": 0,
+            "percentage": 0.0,
+            "status": "N/A"
+        },
+        "performance": {
+            "score": 0.0,
+            "rating": "N/A"
+        },
+        "payroll": {
+            "basic": 50000.0,
+            "bonus": 0.0,
+            "allowance": 0.0,
+            "tax": 0.0,
+            "net_salary": 50000.0
+        }
+    }
+}
