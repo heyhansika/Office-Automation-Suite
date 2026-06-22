@@ -10,6 +10,8 @@ import tkinter as tk
 from tkinter import messagebox
 import json
 import os
+import csv
+from tkinter import filedialog
 
 # ==========================================
 # DATA HANDLING
@@ -203,6 +205,20 @@ class OfficeAutomationApp:
         tk.Button(left_input, text="Update Employee", width=20, bg="lightgreen", command=self.update_employee).pack(pady=5)
         tk.Button(left_input, text="Delete Employee", width=20, bg="salmon", command=self.delete_employee).pack(pady=5)
         tk.Button(left_input, text="Clear Entry Fields", width=20, command=self.clear_employee_fields).pack(pady=5)
+        tk.Button(
+            left_input,
+            text="Import Employees (CSV)",
+            width=20,
+            bg="lightyellow",
+            command=self.import_employees_csv
+        ).pack(pady=5)
+        tk.Button(
+            left_input,
+            text="Export Employees (CSV)",
+            width=20,
+            bg="lightgreen",
+            command=self.export_employees_csv
+        ).pack(pady=5)
         
         # Search panel controls
         search_frame = tk.Frame(right_display, bg="white")
@@ -237,42 +253,168 @@ class OfficeAutomationApp:
 
     def add_employee(self):
         emp_id = self.emp_id_entry.get().strip()
+        if not emp_id:
+            messagebox.showerror("Error", "Employee ID is required.")
+            return
+            
+        if emp_id in self.employees:
+            messagebox.showerror("Error", "Employee ID already exists.")
+            return
+            
         name = self.emp_name_entry.get().strip()
         dept = self.emp_dept_entry.get().strip()
         desig = self.emp_desig_entry.get().strip()
         salary_str = self.emp_sal_entry.get().strip()
         
-        if not emp_id or not name or not dept or not desig or not salary_str:
+        if not name or not dept or not desig or not salary_str:
             messagebox.showerror("Error", "All inputs must be filled.")
-            return
-            
-        if emp_id in self.employees:
-            messagebox.showerror("Error", f"Employee with ID '{emp_id}' already exists.")
             return
             
         try:
             salary = float(salary_str)
             if salary < 0: raise ValueError
         except ValueError:
-            messagebox.showerror("Error", "Salary must be a valid positive number.")
+            messagebox.showerror("Error", "Salary must be a positive number.")
             return
             
-        # Add employee data mapping
         self.employees[emp_id] = {
             "id": emp_id,
             "name": name,
             "dept": dept,
             "designation": desig,
             "salary": salary,
-            "attendance": {"working_days": 0, "present_days": 0, "percentage": 0.0, "status": "N/A"},
-            "performance": {"score": 0.0, "rating": "N/A"},
-            "payroll": {"basic": salary, "bonus": 0.0, "allowance": 0.0, "tax": 0.0, "net_salary": salary}
+            "attendance": {
+                "working_days": 0,
+                "present_days": 0,
+                "percentage": 0.0,
+                "status": "N/A"
+            },
+            "performance": {
+                "score": 0.0,
+                "rating": "N/A"
+            },
+            "payroll": {
+                "basic": salary,
+                "bonus": 0.0,
+                "allowance": 0.0,
+                "tax": 0.0,
+                "net_salary": salary
+            }
         }
         
         save_data(self.employees)
         messagebox.showinfo("Success", f"Employee '{name}' added successfully.")
         self.view_employees()
         self.clear_employee_fields()
+
+    def import_employees_csv(self):
+        """Import employee records from a CSV file."""
+        file_path = filedialog.askopenfilename(
+            title="Select Employee CSV File",
+            filetypes=[("CSV Files", "*.csv")]
+        )
+
+        if not file_path:
+            return
+
+        imported = 0
+        skipped = 0
+
+        try:
+            with open(file_path, "r", newline="", encoding="utf-8") as file:
+                reader = csv.DictReader(file)
+
+                for row in reader:
+                    emp_id = row["ID"].strip()
+
+                    if emp_id in self.employees:
+                        skipped += 1
+                        continue
+
+                    salary = float(row["Salary"])
+
+                    self.employees[emp_id] = {
+                        "id": emp_id,
+                        "name": row["Name"].strip(),
+                        "dept": row["Department"].strip(),
+                        "designation": row["Designation"].strip(),
+                        "salary": salary,
+                        "attendance": {
+                            "working_days": 0,
+                            "present_days": 0,
+                            "percentage": 0.0,
+                            "status": "N/A"
+                        },
+                        "performance": {
+                            "score": 0.0,
+                            "rating": "N/A"
+                        },
+                        "payroll": {
+                            "basic": salary,
+                            "bonus": 0.0,
+                            "allowance": 0.0,
+                            "tax": 0.0,
+                            "net_salary": salary
+                        }
+                    }
+
+                    imported += 1
+
+            save_data(self.employees)
+            self.view_employees()
+
+            messagebox.showinfo(
+                "Import Complete",
+                f"Imported: {imported}\nSkipped (Duplicate IDs): {skipped}"
+            )
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to import CSV.\n\n{e}")
+
+    def export_employees_csv(self):
+        """Export employee records to a CSV file."""
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV Files", "*.csv")],
+            title="Save Employee CSV"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, "w", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+
+                # Header
+                writer.writerow([
+                    "ID",
+                    "Name",
+                    "Department",
+                    "Designation",
+                    "Salary"
+                ])
+
+                # Employee Data
+                for emp in self.employees.values():
+                    writer.writerow([
+                        emp["id"],
+                        emp["name"],
+                        emp["dept"],
+                        emp["designation"],
+                        emp["salary"]
+                    ])
+
+            messagebox.showinfo(
+                "Success",
+                "Employees exported successfully."
+            )
+
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"Failed to export CSV.\n\n{e}"
+            )
 
     def update_employee(self):
         emp_id = self.emp_id_entry.get().strip()
@@ -465,9 +607,9 @@ class OfficeAutomationApp:
         self.att_present_entry.delete(0, tk.END)
         self.att_id_entry.delete(0, tk.END)
 
-# ==========================================
-# PERFORMANCE
-# ==========================================
+    # ==========================================
+    # PERFORMANCE
+    # ==========================================
     def build_performance(self):
         frame = self.frames["Performance"]
         tk.Label(frame, text="Performance Evaluation", font=("Arial", 18, "bold"), bg="white").pack(pady=10)
@@ -550,9 +692,9 @@ class OfficeAutomationApp:
         self.perf_score_entry.delete(0, tk.END)
         self.perf_id_entry.delete(0, tk.END)
 
-# ==========================================
-# PAYROLL
-# ==========================================
+    # ==========================================
+    # PAYROLL
+    # ==========================================
     def build_payroll(self):
         frame = self.frames["Payroll"]
         tk.Label(frame, text="Salary & Payroll Management", font=("Arial", 18, "bold"), bg="white").pack(pady=10)
@@ -662,9 +804,9 @@ class OfficeAutomationApp:
         self.pay_tax_entry.delete(0, tk.END)
         self.pay_id_entry.delete(0, tk.END)
 
-# ==========================================
-# REPORTS
-# ==========================================
+    # ==========================================
+    # REPORTS
+    # ==========================================
     def build_reports(self):
         frame = self.frames["Reports"]
         tk.Label(frame, text="Office Reports Desk", font=("Arial", 18, "bold"), bg="white").pack(pady=10)
