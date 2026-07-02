@@ -108,32 +108,67 @@ class OfficeAutomationApp:
         self.db_panel.pack(pady=10)
         
         self.lbl_total = tk.Label(self.db_panel, text="Total Employees: --", font=("Arial", 12), bg="white")
-        self.lbl_total.pack(pady=8, anchor="w")
+        self.lbl_total.pack(pady=6, anchor="w")
+        
+        self.lbl_dept_counts = tk.Label(self.db_panel, text="Department Distribution: --", font=("Arial", 12), bg="white")
+        self.lbl_dept_counts.pack(pady=6, anchor="w")
         
         self.lbl_avg_att = tk.Label(self.db_panel, text="Average Attendance: --", font=("Arial", 12), bg="white")
-        self.lbl_avg_att.pack(pady=8, anchor="w")
+        self.lbl_avg_att.pack(pady=6, anchor="w")
+        
+        self.lbl_att_breakdown = tk.Label(self.db_panel, text="Attendance Stats: --", font=("Arial", 12), bg="white")
+        self.lbl_att_breakdown.pack(pady=6, anchor="w")
         
         self.lbl_avg_perf = tk.Label(self.db_panel, text="Average Performance: --", font=("Arial", 12), bg="white")
-        self.lbl_avg_perf.pack(pady=8, anchor="w")
-        
-        self.lbl_max_pay = tk.Label(self.db_panel, text="Highest Paid Employee: --", font=("Arial", 12), bg="white")
-        self.lbl_max_pay.pack(pady=8, anchor="w")
+        self.lbl_avg_perf.pack(pady=6, anchor="w")
         
         self.lbl_best_perf = tk.Label(self.db_panel, text="Best Performer: --", font=("Arial", 12), bg="white")
-        self.lbl_best_perf.pack(pady=8, anchor="w")
+        self.lbl_best_perf.pack(pady=6, anchor="w")
+        
+        self.lbl_max_pay = tk.Label(self.db_panel, text="Highest Paid Employee: --", font=("Arial", 12), bg="white")
+        self.lbl_max_pay.pack(pady=6, anchor="w")
+        
+        self.lbl_min_pay = tk.Label(self.db_panel, text="Lowest Paid Employee: --", font=("Arial", 12), bg="white")
+        self.lbl_min_pay.pack(pady=6, anchor="w")
+        
+        self.lbl_recent_emp = tk.Label(self.db_panel, text="Recently Added Employee: --", font=("Arial", 12), bg="white")
+        self.lbl_recent_emp.pack(pady=6, anchor="w")
 
     def refresh_dashboard(self):
         """Calculates and refreshes all summary statistics for the dashboard view."""
         total_emp = len(self.employees)
         
+        # Department-wise employee count
+        dept_counts = {}
+        for emp in self.employees.values():
+            dept = emp.get("dept", "N/A").strip() or "N/A"
+            dept_counts[dept] = dept_counts.get(dept, 0) + 1
+        dept_str = ", ".join([f"{dept} ({count})" for dept, count in dept_counts.items()]) if dept_counts else "None"
+        
         # Average Attendance
         att_pcts = [emp["attendance"]["percentage"] for emp in self.employees.values() if emp["attendance"]["status"] != "N/A"]
         avg_att = sum(att_pcts) / len(att_pcts) if att_pcts else 0.0
+        
+        # Attendance breakdown statistics
+        att_stats = {"Excellent": 0, "Good": 0, "Average": 0, "Poor": 0}
+        for emp in self.employees.values():
+            status = emp["attendance"]["status"]
+            if status in att_stats:
+                att_stats[status] += 1
+        att_breakdown_str = f"Excellent: {att_stats['Excellent']} | Good: {att_stats['Good']} | Average: {att_stats['Average']} | Poor: {att_stats['Poor']}"
         
         # Average Performance Evaluation
         perf_scores = [emp["performance"]["score"] for emp in self.employees.values() if emp["performance"]["rating"] != "N/A"]
         avg_perf = sum(perf_scores) / len(perf_scores) if perf_scores else 0.0
         
+        # Best Performer
+        best_perf_name = "N/A"
+        best_perf_score = 0.0
+        if perf_scores:
+            best_perf_emp = max((emp for emp in self.employees.values() if emp["performance"]["rating"] != "N/A"), key=lambda e: e["performance"]["score"])
+            best_perf_name = best_perf_emp["name"]
+            best_perf_score = best_perf_emp["performance"]["score"]
+            
         # Highest Paid Employee
         max_pay_name = "N/A"
         max_pay_val = 0.0
@@ -143,24 +178,39 @@ class OfficeAutomationApp:
                 max_pay_name = best_salary_emp["name"]
                 max_pay_val = best_salary_emp["payroll"]["net_salary"]
             else:
-                # Fallback to basic salary if payroll basic was not calculated
                 best_salary_emp = max(self.employees.values(), key=lambda e: e["salary"])
                 max_pay_name = best_salary_emp["name"]
                 max_pay_val = best_salary_emp["salary"]
                 
-        # Best Performer
-        best_perf_name = "N/A"
-        best_perf_score = 0.0
-        if perf_scores:
-            best_perf_emp = max((emp for emp in self.employees.values() if emp["performance"]["rating"] != "N/A"), key=lambda e: e["performance"]["score"])
-            best_perf_name = best_perf_emp["name"]
-            best_perf_score = best_perf_emp["performance"]["score"]
+        # Lowest Paid Employee
+        min_pay_name = "N/A"
+        min_pay_val = 0.0
+        if self.employees:
+            worst_salary_emp = min(
+                self.employees.values(), 
+                key=lambda e: e["payroll"]["net_salary"] if e["payroll"]["net_salary"] > 0 else e["salary"]
+            )
+            min_pay_val = worst_salary_emp["payroll"]["net_salary"] if worst_salary_emp["payroll"]["net_salary"] > 0 else worst_salary_emp["salary"]
+            min_pay_name = worst_salary_emp["name"]
+            
+        # Recently added employee
+        recent_emp_name = "N/A"
+        recent_emp_id = "N/A"
+        if self.employees:
+            last_id = list(self.employees.keys())[-1]
+            recent_emp = self.employees[last_id]
+            recent_emp_name = recent_emp["name"]
+            recent_emp_id = recent_emp["id"]
             
         self.lbl_total.config(text=f"Total Employees: {total_emp}")
+        self.lbl_dept_counts.config(text=f"Department Distribution: {dept_str}")
         self.lbl_avg_att.config(text=f"Average Attendance: {avg_att:.1f}%")
+        self.lbl_att_breakdown.config(text=f"Attendance Stats: {att_breakdown_str}")
         self.lbl_avg_perf.config(text=f"Average Performance: {avg_perf:.1f}/100")
-        self.lbl_max_pay.config(text=f"Highest Paid Employee: {max_pay_name} (${max_pay_val:,.2f})")
         self.lbl_best_perf.config(text=f"Best Performer: {best_perf_name} ({best_perf_score:.1f}/100)")
+        self.lbl_max_pay.config(text=f"Highest Paid Employee: {max_pay_name} (${max_pay_val:,.2f})")
+        self.lbl_min_pay.config(text=f"Lowest Paid Employee: {min_pay_name} (${min_pay_val:,.2f})")
+        self.lbl_recent_emp.config(text=f"Recently Added Employee: {recent_emp_name} (ID: {recent_emp_id})")
 
     # ==========================================
     # EMPLOYEE MANAGEMENT
